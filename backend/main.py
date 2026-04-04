@@ -2,12 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from database import engine, Base
+import models
 import auth
+import resume
 import os
 
 load_dotenv()
 
-# Creates all tables on startup
+# Create all tables on startup
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -24,8 +26,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register auth routes
+# Register all routers
 app.include_router(auth.router)
+app.include_router(resume.router)
 
 @app.get("/")
 def root():
