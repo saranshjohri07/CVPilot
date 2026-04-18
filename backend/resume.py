@@ -2,6 +2,7 @@ import os
 import json
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
+from feedback import generate_feedback, ask_ai
 
 from database import get_db
 from models import Resume, User
@@ -74,6 +75,9 @@ async def upload_resume(
     # ── STEP 7: Match job roles ──────────────────────
     top_roles = match_job_roles(matched)
 
+    # ── STEP 8: Generate AI feedback ─────────────────
+    ai_feedback = generate_feedback(raw_text)
+
     # ── STEP 8: Save to database ─────────────────────
     new_resume = Resume(
         user_id=current_user.id,
@@ -90,6 +94,7 @@ async def upload_resume(
 
     # ── STEP 9: Return result to React ───────────────
     return {
+        "feedback": ai_feedback,
         "resume_id": new_resume.id,
         "filename": file.filename,
         "ats_score": score_results["ats_score"],
@@ -161,4 +166,38 @@ def get_resume(
         "missing_keywords": missing,
         "job_matches": top_roles,
         "created_at": str(resume.created_at)
+    }
+
+from pydantic import BaseModel
+
+class AskAIRequest(BaseModel):
+    question: str
+
+@router.post("/{resume_id}/ask")
+def ask_ai_question(
+    resume_id: int,
+    request: AskAIRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Ask AI a specific question about your resume.
+    Used for interactive chat feature.
+    """
+    resume = db.query(Resume).filter(
+        Resume.id == resume_id,
+        Resume.user_id == current_user.id
+    ).first()
+
+    if not resume:
+        raise HTTPException(
+            status_code=404,
+            detail="Resume not found"
+        )
+
+    answer = ask_ai(resume.raw_text, request.question)
+
+    return {
+        "question": request.question,
+        "answer": answer
     }
