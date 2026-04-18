@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import API from '../services/api'
+import ScoreGauge from '../components/ScoreGauge'
+import SubScoresPanel from '../components/SubScoresPanel'
+import KeywordBadges from '../components/KeywordBadges'
+import JobMatchCards from '../components/JobMatchCards'
+import FeedbackCards from '../components/FeedbackCards'
+import AskAI from '../components/AskAI'
+import GoalTracker from '../components/GoalTracker'
 
 const Result = () => {
   const { id } = useParams()
@@ -16,167 +23,85 @@ const Result = () => {
         setLoading(false)
       })
       .catch(() => {
-        setError('Could not load results')
+        setError('Could not load results. Please try again.')
         setLoading(false)
       })
   }, [id])
 
   if (loading) return (
     <div className="min-h-screen flex items-center 
-                    justify-center">
+                    justify-center bg-slate-50">
       <div className="text-center">
-        <div className="text-4xl mb-4">⏳</div>
-        <p className="text-slate-500">Loading results...</p>
+        <div className="text-5xl mb-4 animate-bounce">🧠</div>
+        <p className="text-slate-500 font-medium">
+          Loading your analysis...
+        </p>
       </div>
     </div>
   )
 
   if (error) return (
     <div className="min-h-screen flex items-center 
-                    justify-center">
-      <p className="text-red-500">{error}</p>
+                    justify-center bg-slate-50">
+      <div className="text-center">
+        <p className="text-red-500 mb-4">{error}</p>
+        <button
+          onClick={() => navigate('/upload')}
+          className="text-blue-600 underline text-sm">
+          Try uploading again
+        </button>
+      </div>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-slate-50 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={() => navigate('/upload')}
-            className="text-slate-500 hover:text-blue-600 
-                       transition text-sm font-medium">
-            ← Upload Another
+            className="flex items-center gap-2 text-slate-500 
+                       hover:text-blue-600 transition 
+                       text-sm font-medium">
+            ← Upload Another Resume
           </button>
           <span className="text-slate-400 text-sm">
-            {data?.filename}
+            📄 {data?.filename}
           </span>
         </div>
 
-        {/* ATS Score */}
-        <div className="bg-white rounded-2xl p-8 
-                        shadow-sm border border-slate-100 mb-6
-                        text-center">
-          <p className="text-slate-500 text-sm mb-2">
-            ATS Compatibility Score
-          </p>
-          <div className={`text-7xl font-black mb-2
-            ${data?.ats_score >= 70 ? 'text-green-500' :
-              data?.ats_score >= 40 ? 'text-yellow-500' :
-              'text-red-500'}`}>
-            {data?.ats_score}
-          </div>
-          <p className="text-slate-400 text-sm">out of 100</p>
-          <p className="mt-3 font-medium text-slate-600">
-            {data?.ats_score >= 70
-              ? '✅ Strong resume!'
-              : data?.ats_score >= 40
-              ? '⚠️ Needs improvement'
-              : '❌ Significant work needed'}
-          </p>
+        {/* ROW 1: Score + Sub-scores */}
+        <div className="grid grid-cols-1 md:grid-cols-2 
+                        gap-6 mb-6">
+          <ScoreGauge score={data?.ats_score || 0} />
+          <SubScoresPanel subScores={data?.sub_scores} />
         </div>
 
-        {/* Keywords Grid */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
-
-          {/* Matched */}
-          <div className="bg-white rounded-2xl p-6 
-                          shadow-sm border border-slate-100">
-            <h3 className="font-bold text-slate-800 mb-4">
-              ✅ Matched Keywords
-              <span className="ml-2 text-green-500 
-                               text-sm font-normal">
-                ({data?.matched_keywords?.length})
-              </span>
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {data?.matched_keywords?.map(kw => (
-                <span key={kw}
-                      className="bg-green-50 text-green-700 
-                                 text-xs px-3 py-1 rounded-full
-                                 font-medium border border-green-200">
-                  {kw}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Missing */}
-          <div className="bg-white rounded-2xl p-6 
-                          shadow-sm border border-slate-100">
-            <h3 className="font-bold text-slate-800 mb-4">
-              ❌ Missing Keywords
-              <span className="ml-2 text-red-400 
-                               text-sm font-normal">
-                ({data?.missing_keywords?.length})
-              </span>
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {data?.missing_keywords?.slice(0,20).map(kw => (
-                <span key={kw}
-                      className="bg-red-50 text-red-600 
-                                 text-xs px-3 py-1 rounded-full
-                                 font-medium border border-red-200">
-                  {kw}
-                </span>
-              ))}
-            </div>
-          </div>
+        {/* ROW 2: Keywords */}
+        <div className="mb-6">
+          <KeywordBadges
+            matched={data?.matched_keywords}
+            missing={data?.missing_keywords}
+          />
         </div>
 
-        {/* Job Matches */}
-        <div className="bg-white rounded-2xl p-6 
-                        shadow-sm border border-slate-100">
-          <h3 className="font-bold text-slate-800 mb-4">
-            💼 Top Job Matches
-          </h3>
-          <div className="space-y-4">
-            {data?.job_matches?.map((job, i) => (
-              <div key={i}
-                   className="border border-slate-100 
-                              rounded-xl p-4">
-                <div className="flex items-center 
-                                justify-between mb-2">
-                  <span className="font-semibold text-slate-800">
-                    {job.role}
-                  </span>
-                  <span className={`text-sm font-bold px-3 py-1 
-                                   rounded-full
-                    ${job.match_percent >= 60
-                      ? 'bg-green-50 text-green-600'
-                      : job.match_percent >= 30
-                      ? 'bg-yellow-50 text-yellow-600'
-                      : 'bg-red-50 text-red-500'}`}>
-                    {job.match_percent}% match
-                  </span>
-                </div>
-                {/* Progress bar */}
-                <div className="w-full bg-slate-100 
-                                rounded-full h-2">
-                  <div
-                    className="bg-blue-500 h-2 rounded-full 
-                               transition-all"
-                    style={{width: `${job.match_percent}%`}}
-                  />
-                </div>
-                {/* Missing skills */}
-                {job.missing_skills?.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {job.missing_skills.slice(0,5).map(s => (
-                      <span key={s}
-                            className="text-xs text-slate-400 
-                                       bg-slate-50 px-2 py-0.5 
-                                       rounded-full">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+        {/* ROW 3: Job Matches + AI Feedback */}
+        <div className="grid grid-cols-1 md:grid-cols-2 
+                        gap-6 mb-6">
+          <JobMatchCards matches={data?.job_matches} />
+          <FeedbackCards feedback={data?.feedback} />
+        </div>
+
+        {/* ROW 4: Ask AI */}
+        <div className="mb-6">
+          <AskAI resumeId={id} />
+        </div>
+
+        {/* ROW 5: Goal Tracker */}
+        <div className="mb-6">
+          <GoalTracker />
         </div>
 
       </div>

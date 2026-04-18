@@ -158,13 +158,27 @@ def get_resume(
     missing = json.loads(resume.missing_keywords or "[]")
     top_roles = match_job_roles(matched)
 
+    # Generate AI feedback from stored text
+    ai_feedback = generate_feedback(resume.raw_text) if resume.raw_text else []
+
+    # Calculate sub_scores from ats_score
+    score = resume.ats_score or 0
+    sub_scores = {
+        "skills":     min(100, int(score * 0.90)),
+        "keywords":   min(100, int(score * 0.80)),
+        "format":     min(100, int(score * 1.10)),
+        "experience": min(100, int(score * 0.85))
+    }
+
     return {
         "id": resume.id,
         "filename": resume.filename,
         "ats_score": resume.ats_score,
+        "sub_scores": sub_scores,
         "matched_keywords": matched,
         "missing_keywords": missing,
         "job_matches": top_roles,
+        "feedback": ai_feedback,
         "created_at": str(resume.created_at)
     }
 
